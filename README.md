@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # SAGE
 
 **Spatial Accessibility Guidance Engine**
