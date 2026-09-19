@@ -14,10 +14,10 @@ Use `--reload` for local development only. Stop the server with Ctrl+C.
 ## Configuration
 
 Defaults work without configuration. Optionally copy `backend/.env.example`
-to `backend/.env` if that file does not already exist, then edit it.
+to `.env` at the repository root only if that file does not already exist. Preserve existing keys.
 `SAGE_APP_TITLE` controls the title in the generated API documentation and must
 not be blank. Process environment variables override values in the file.
-The file path is resolved relative to the backend, independent of the shell's
+The file path points to the repository root, independent of the shell's
 working directory. Restart the server after changing settings.
 
 Never commit secrets. `.env` files and virtual environments are ignored;
@@ -58,3 +58,64 @@ hardware, sensor quality, collision processing, or whether navigation is safe.
 
 Only the backend foundation is implemented here. Navigation events, persistence,
 and edge processing belong to later sections.
+
+## Section 2: Event data model
+
+The standalone obstacle event contract, field decisions, code walkthrough, and
+isolated test commands are documented in [Event data model](docs/event-model.md).
+This adds no API endpoint or external integration.
+
+## Section 3: Event API
+
+`POST /events` validates an `ObstacleDetectedEvent` and returns it with HTTP 200.
+It does not save, queue, deduplicate, or log the event payload, or trigger warnings.
+There is no event retrieval endpoint yet. Keep the development server bound to
+127.0.0.1; this section does not add authentication or deployment configuration.
+
+`app/routes/events.py` uses FastAPI's `APIRouter` to group the event endpoint.
+`main.py` registers that router with `app.include_router`. The typed `event`
+parameter makes FastAPI validate JSON using the existing Pydantic model before
+calling `receive_event`. Valid input reaches the function and is returned through
+the declared response model. Invalid input produces FastAPI's standard HTTP 422
+response with a `detail` list identifying the failing fields. No service layer is
+needed until the route has storage or other business operations to delegate.
+
+### Manual check
+
+From the repository root, start the backend:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+```
+
+Open http://127.0.0.1:8000/docs, expand POST /events, choose Try it out, and paste
+the contents of `backend/examples/obstacle_event.json`. Execute the request.
+Expect HTTP 200 with the same event. Change confidence to 1.2 and execute again:
+expect HTTP 422 with an error pointing to confidence.
+
+Alternatively, from a second PowerShell window at the repository root:
+
+```powershell
+$eventJson = Get-Content backend\examples\obstacle_event.json -Raw
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/events -ContentType 'application/json' -Body $eventJson
+```
+
+Connection refused means the server is not running at that address. A 404 on POST
+/events usually means an older app process is running; restart with the command
+above. GET /events returns 405 because only POST is supported. Validation errors
+are expected for malformed JSON, missing required fields, and unsupported values.
+
+### Automated checks
+
+No running server is required. HTTPX is a development-only dependency used by
+FastAPI's TestClient, which exercises the app in-process without network calls.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+.\.venv\Scripts\python.exe -m unittest discover -s backend\tests -v
+```
+
+Expect 11 passing tests across the model and API. Tests cover valid and minimal
+requests, validation errors, malformed/missing bodies, repeated IDs, existing
+routes, and the OpenAPI contract. Acceptance of a repeated ID is not deduplication.
+The next section is MongoDB integration, only after explicit approval.

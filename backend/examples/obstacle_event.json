@@ -1,0 +1,11 @@
+{
+  "event_id": "b7525210-a4bb-4d10-8fa6-9bb5da759062",
+  "timestamp": "2026-09-19T15:30:00-04:00",
+  "device_id": "wearable-pi-01",
+  "event_type": "obstacle_detected",
+  "object_label": "backpack",
+  "environment_id": "classroom-demo",
+  "confidence": 0.91,
+  "distance_m": 0.9,
+  "direction": "front"
+}
