@@ -60,5 +60,3 @@ As SAGE encounters environments repeatedly, it can build persistent spatial know
 * American Printing House for the Blind, *Federal Quota Census Data*
   https://www.aph.org/federalquota/
 =======
-# SAGE-spatial-accessibility-guidance-engine-
->>>>>>> 938285a40fd6c51340d40411846e86a4609da96f
