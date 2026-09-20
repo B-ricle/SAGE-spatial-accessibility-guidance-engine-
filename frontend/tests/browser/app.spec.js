@@ -32,7 +32,7 @@ test('mock auth, analysis, saving and signout; no external writes', async ({ pag
     const url = route.request().url();
     if (url.includes('/logout')) return route.fulfill({status:204});
     if (url.includes('/user')) return route.fulfill({json:user});
-    if (url.includes('/rest/v1/observations')) { saved=route.request().postDataJSON(); return route.fulfill({status:201,json:[]}); }
+    if (url.includes('/rest/v1/observations')) { if (route.request().method() === 'GET') return route.fulfill({json: saved ? [saved] : []}); saved=route.request().postDataJSON(); return route.fulfill({status:201,json:[]}); }
     return route.fulfill({json:{access_token:'mock-access',refresh_token:'mock-refresh',expires_in:3600,token_type:'bearer',user}});
   });
   await page.route('**/api/analyze', route => route.fulfill({json:[{type:'semantic_observation',observation_id:'22222222-2222-4222-8222-222222222222',timestamp:new Date().toISOString(),simulated:false,object_label:'chair',confidence:null}]}));
@@ -50,6 +50,10 @@ test('mock auth, analysis, saving and signout; no external writes', async ({ pag
   await page.getByRole('button',{name:'Save to my history',exact:true}).click();
   await expect(page.locator('.notice')).toContainText('saved');
   expect(saved.user_id).toBe(user.id);
+  await page.getByText('My saved history and preferences', {exact:true}).click();
+  await page.getByRole('button',{name:'Refresh history',exact:true}).click();
+  await expect(page.getByText('Latest 50 or fewer saved observations.',{exact:true})).toBeVisible();
+  await expect(page.locator('details').filter({has:page.getByText('My saved history and preferences',{exact:true})})).toContainText('chair');
   await page.getByRole('button',{name:'Account',exact:true}).click();
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.getByRole('heading',{name:'chair',exact:true})).not.toBeVisible();
