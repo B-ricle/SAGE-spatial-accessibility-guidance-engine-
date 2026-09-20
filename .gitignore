@@ -13,3 +13,10 @@ __pycache__/
 # Frontend dependencies and build output
 node_modules/
 frontend/dist/
+
+# Native build products
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+frontend/ios/**/xcuserdata/
+frontend/test-results/
+frontend/playwright-report/

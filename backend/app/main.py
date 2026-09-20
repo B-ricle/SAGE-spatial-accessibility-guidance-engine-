@@ -1,6 +1,8 @@
 from typing import Literal
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from .routes.perception import router as perception_router
 from pydantic import BaseModel
 
 from .config import Settings
@@ -15,6 +17,8 @@ app = FastAPI(
 )
 
 
+app.add_middleware(CORSMiddleware, allow_origins=settings.allowed_origins, allow_methods=['GET', 'POST'], allow_headers=['Authorization', 'Content-Type'])
+app.include_router(perception_router)
 app.include_router(events_router)
 app.include_router(telemetry_router)
 

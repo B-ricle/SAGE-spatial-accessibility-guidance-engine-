@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.main import app
 from app.models.pose import PoseUpdate
+from app.models.semantic import SemanticObservation
 
 
 class TelemetryTests(unittest.TestCase):
@@ -12,6 +13,11 @@ class TelemetryTests(unittest.TestCase):
         with TestClient(app) as client:
             with client.websocket_connect('/ws/demo') as socket:
                 first = PoseUpdate.model_validate_json(socket.receive_text())
+                observation = SemanticObservation.model_validate_json(socket.receive_text())
+                self.assertTrue(observation.simulated)
+                self.assertEqual(observation.object_label, 'backpack')
+                self.assertEqual(socket.receive_json()['type'], 'hazard_update')
+                self.assertEqual(socket.receive_json()['type'], 'system_status')
                 second = PoseUpdate.model_validate_json(socket.receive_text())
                 self.assertTrue(first.simulated)
                 self.assertEqual(first.coordinate_frame, 'demo_room')
