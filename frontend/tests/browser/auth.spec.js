@@ -62,3 +62,21 @@ test('stalled submission disables controls then releases them with an error', as
   await expect(page.locator('#auth-panel button[type=submit]')).toBeEnabled();
 });
 
+
+
+test('signup with a session shows signed-in state and survives reload', async ({ page }) => {
+  await page.route('https://*.supabase.co/**', route => route.fulfill({
+    json: route.request().url().includes('/user') ? user :
+      { access_token: 'mock-access', refresh_token: 'mock-refresh', expires_in: 3600, token_type: 'bearer', user }
+  }));
+  await open(page);
+  await page.getByRole('button', { name: 'Create an account', exact: true }).click();
+  await page.getByLabel('Email', { exact: true }).fill(user.email);
+  await page.getByLabel('Password', { exact: true }).fill('test-password');
+  await page.getByRole('button', { name: 'Create account', exact: true }).click();
+  await expect(page.locator('#auth-panel')).toContainText('Signed in as review@example.com');
+  await expect(page.locator('#auth-panel [role=status]')).toHaveText('You are signed in.');
+  await page.reload();
+  await page.getByRole('button', { name: 'Account', exact: true }).click();
+  await expect(page.locator('#auth-panel')).toContainText('Signed in as review@example.com');
+});

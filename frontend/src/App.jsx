@@ -25,7 +25,14 @@ function Account({ session, open, onClose }) {
       const result = await withAuthDeadline(operation);
       if (result.error) throw result.error;
       form.reset();
-      setMessage(mode === 'signup' || mode === 'reset' ? 'Check your email for the next step, if applicable.' : 'Success.');
+      if (mode === 'reset') setMessage('Check your email for a password reset link, if an account exists.');
+      else if (mode === 'update') setMessage('Success. Password updated.');
+      else if (result.data?.session) {
+        setMode('signin');
+        setMessage('You are signed in.');
+      } else if (mode === 'signup') {
+        setMessage('Email confirmation is required by this project before you can sign in. Check your email for the confirmation link.');
+      } else setMessage('No sign-in session was returned. Please try again.');
       if (mode === 'update') setMode('signin');
     } catch (error) { setMessage(authErrorMessage(error)); }
     finally { pending.current = false; setBusy(false); }
@@ -45,7 +52,7 @@ function Account({ session, open, onClose }) {
   return <dialog ref={dialog} id="account-dialog" aria-labelledby="auth-title" onCancel={onClose} onClose={onClose}>
     <button type="button" className="dialog-close" onClick={onClose}>Close</button><section id="auth-panel">
       <p className="eyebrow">Your account</p><h2 id="auth-title">Welcome to SAGE.</h2>
-      {session && mode !== 'update' ? <><p>{session.user.email}</p><button type="button" disabled={busy} onClick={logout}>Sign out</button><button type="button" disabled={busy} onClick={() => { setMode("update"); setMessage(""); }}>Change password</button></> : <>
+      {session && mode !== 'update' ? <><p>Signed in as {session.user.email}</p><button type="button" disabled={busy} onClick={logout}>Sign out</button><button type="button" disabled={busy} onClick={() => { setMode("update"); setMessage(""); }}>Change password</button></> : <>
         <form onSubmit={submit} aria-busy={busy}><fieldset disabled={busy}>
           {mode !== 'update' && <><label htmlFor="auth-email">Email</label><input id="auth-email" name="email" type="email" autoComplete="email" required /></>}
           {mode !== 'reset' && <><label htmlFor="auth-password">Password</label><input id="auth-password" name="password" type="password" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={mode === 'signin' ? 1 : 8} required /></>}
@@ -260,4 +267,5 @@ function App() {
   </>;
 }
 createRoot(document.getElementById('root')).render(<App />);
+
 
