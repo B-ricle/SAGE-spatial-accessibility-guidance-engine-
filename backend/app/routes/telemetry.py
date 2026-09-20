@@ -1,4 +1,3 @@
-"""An explicit demo stream, with no hardware or navigation side effects."""
 import asyncio
 from contextlib import suppress
 from datetime import datetime, timezone

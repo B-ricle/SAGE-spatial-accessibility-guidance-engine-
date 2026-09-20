@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f5f7" />
     <meta name="description" content="SAGE spatial accessibility monitoring application." />
-    <title>SAGE | Environment overview</title>
+    <title>SAGE | Environment overview</title><link rel="stylesheet" href="/src/styles.css" />
     <script>
       // Apply the saved preference before the page paints to avoid a bright flash.
       try {
@@ -25,7 +25,7 @@
       <a class="brand" href="/" aria-label="SAGE home">sage.</a>
       <span class="edition">Spatial Accessibility Guidance Engine</span>
       <span class="version">Preview 01</span><button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>Dark theme</button>
-    </header>
+    <button type="button" class="account-button" id="open-account">Sign in</button></header>
     <main id="main" tabindex="-1">
       <div class="intro">
         <div><p class="eyebrow">Environment overview</p><h1>Your surroundings.<br />A little clearer.</h1></div>
@@ -44,7 +44,7 @@
           <p class="scene-help">Drag to orbit · Scroll or pinch to zoom. X/Z: floor plane · Y: height.</p>
           <p class="scene-help" id="scene-status" role="status">Loading the demonstration scene…</p>
           <div class="scene-footer"><span>Building model: not supplied</span><span>Live user position: unknown</span></div>        </section>
-        <aside aria-label="Monitoring status">
+        <aside aria-label="Account and monitoring status">
           <section class="status-panel" id="telemetry-panel" aria-labelledby="status-title">
             <p class="eyebrow">Simulated telemetry</p><h2 id="status-title">Demo connection</h2>
             <p data-connection role="status">Disconnected</p>
@@ -59,6 +59,22 @@
     </main>
     <footer><span>SAGE · Spatial awareness, thoughtfully designed.</span><span>Application preview</span></footer>
     <noscript><p class="noscript">JavaScript is disabled. Future live updates require JavaScript.</p></noscript>
+<dialog id="account-dialog" aria-labelledby="auth-title"><button type="button" class="dialog-close" aria-label="Close account dialog">Close</button>          <section class="status-panel" id="auth-panel" aria-labelledby="auth-title">
+            <p class="eyebrow">Your account</p><h2 id="auth-title">Welcome to SAGE.</h2>
+            <p data-identity>Restoring session…</p>
+            <form>
+              <label for="auth-email">Email</label>
+              <input id="auth-email" name="email" type="email" autocomplete="email" required maxlength="254" />
+              <label for="auth-password">Password</label>
+              <input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="1" />
+              <button type="submit">Sign in</button>
+            </form>
+            <button type="button" data-auth-mode>New to SAGE? Create an account</button>
+            <button type="button" data-sign-out hidden>Sign out</button>
+            <p data-auth-status role="status"></p>
+            <p>Sign-in uses Supabase. The demo remains public; EE data access is not connected yet.</p>
+          </section>
+</dialog>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

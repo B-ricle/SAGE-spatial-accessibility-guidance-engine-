@@ -1,4 +1,4 @@
-import './styles.css';
+// Styles load directly from HTML, independently of JavaScript dependencies.
 
 const themeButton = document.querySelector('.theme-toggle');
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
@@ -46,3 +46,24 @@ if (import.meta.hot) import.meta.hot.dispose(disposeEnvironment);
 import { connectTelemetry } from './telemetry.js';
 const disposeTelemetry = connectTelemetry(document.querySelector('#telemetry-panel'));
 if (import.meta.hot) import.meta.hot.dispose(disposeTelemetry);
+
+const accountDialog = document.querySelector('#account-dialog');
+const accountButton = document.querySelector('#open-account');
+accountButton.addEventListener('click', () => accountDialog.showModal());
+accountDialog.querySelector('.dialog-close').addEventListener('click', () => accountDialog.close());
+
+// Auth failures should never prevent theme controls or the page from rendering.
+let disposeAuth;
+let authDisposed = false;
+import('./auth.js').then(({ setupAuth }) => {
+  if (!authDisposed) disposeAuth = setupAuth(document.querySelector('#auth-panel'));
+}).catch(() => {
+  document.querySelector('[data-identity]').textContent = 'Sign-in temporarily unavailable';
+  document.querySelector('[data-auth-status]').textContent = 'Reload the page to try again.';
+  document.querySelectorAll('#auth-panel button, #auth-panel input').forEach(element => { element.disabled = true; });
+});
+if (import.meta.hot) import.meta.hot.dispose(() => {
+  authDisposed = true;
+  disposeAuth?.();
+  accountDialog.close();
+});
