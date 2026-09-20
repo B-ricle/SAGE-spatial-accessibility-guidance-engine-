@@ -5,6 +5,7 @@ from math import cos, sin
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..models.pose import PoseUpdate
+from ..services.demo import demo_observation
 
 router = APIRouter()
 
@@ -22,6 +23,8 @@ async def demo_positions(socket: WebSocket):
                 z=round(2 * cos(sequence / 8), 3),
             )
             await socket.send_text(event.model_dump_json())
+            if sequence % 5 == 0:
+                await socket.send_text(demo_observation().model_dump_json())
             sequence += 1
             await asyncio.sleep(1)
 

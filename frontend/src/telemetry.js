@@ -1,5 +1,7 @@
+import { createObservationPanel } from './observations.js';
 // Latest-message state only. No history, hardware access, or scene mutations.
 export function connectTelemetry(panel) {
+  const observations = createObservationPanel(document.querySelector('.observations'));
   const button = panel.querySelector('button');
   const state = panel.querySelector('[data-connection]');
   const coordinates = panel.querySelector('[data-position]');
@@ -12,11 +14,13 @@ export function connectTelemetry(panel) {
     const previous = socket;
     socket = null;
     previous?.close();
+    observations.disconnect();
     state.textContent = 'Disconnected — displayed data is not live';
     button.textContent = 'Connect demo';
   }
   function toggle() {
     if (socket) { disconnect(); return; }
+    observations.reset();
     lastReceived = null;
     sequence = -1;
     coordinates.textContent = 'Waiting for a valid message';
@@ -35,6 +39,10 @@ export function connectTelemetry(panel) {
       raw.textContent = String(data).slice(0, 4096);
       try {
         const message = JSON.parse(data);
+        if (message?.type === 'semantic_observation') {
+          observations.receive(message);
+          return;
+        }
         if (message.type !== 'pose_update' || message.simulated !== true ||
             message.coordinate_frame !== 'demo_room' || message.units !== 'meters' ||
             !Number.isInteger(message.sequence) || message.sequence <= sequence ||
@@ -62,6 +70,7 @@ export function connectTelemetry(panel) {
     };
   }
   const timer = setInterval(() => {
+    observations.tick();
     if (socket?.readyState === WebSocket.OPEN && lastReceived !== null &&
         performance.now() - lastReceived > 5000) {
       state.textContent = 'Stale — no valid update for over 5 seconds';

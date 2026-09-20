@@ -164,3 +164,8 @@ footer { max-width: 1120px; margin: 0 auto; padding: 22px 0 30px; display: flex;
 .dialog-close { display: block; margin-left: auto; }
 #account-dialog .status-panel { padding: 12px; box-shadow: none; }
 @media (max-width: 520px) { .topbar { gap: 8px; } .account-button { padding: 8px 12px; } }
+
+.observations pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; font-size: 11px; }
+.observations h3, .observations p { overflow-wrap: anywhere; }
+.observations details { font-size: 12px; }
+.observations summary { cursor: pointer; }
