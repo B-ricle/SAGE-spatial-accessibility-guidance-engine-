@@ -4,14 +4,20 @@ from datetime import datetime, timezone
 from math import cos, sin
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from ..config import Settings
 from ..models.pose import PoseUpdate
 from ..services.demo import demo_observation
+from ..services.risk import projected_risk
+from ..models.status import DemoHazard, HazardUpdate, SystemStatus
 
 router = APIRouter()
 
 
 @router.websocket("/ws/demo")
 async def demo_positions(socket: WebSocket):
+    if not Settings().demo_enabled:
+        await socket.close(code=1008)
+        return
     await socket.accept()
 
     async def produce():
@@ -25,6 +31,11 @@ async def demo_positions(socket: WebSocket):
             await socket.send_text(event.model_dump_json())
             if sequence % 5 == 0:
                 await socket.send_text(demo_observation().model_dump_json())
+            risk = projected_risk(event.x, event.z, .25 * cos(sequence / 8), -.25 * sin(sequence / 8), 0, 2)
+            await socket.send_text(HazardUpdate(timestamp=event.timestamp, hazards=[
+                DemoHazard(id='demo-obstacle', x=0, z=2, radius_m=.6, severity=risk)
+            ]).model_dump_json())
+            await socket.send_text(SystemStatus(timestamp=event.timestamp, localization='active', perception='active').model_dump_json())
             sequence += 1
             await asyncio.sleep(1)
 

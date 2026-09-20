@@ -16,6 +16,8 @@ class TelemetryTests(unittest.TestCase):
                 observation = SemanticObservation.model_validate_json(socket.receive_text())
                 self.assertTrue(observation.simulated)
                 self.assertEqual(observation.object_label, 'backpack')
+                self.assertEqual(socket.receive_json()['type'], 'hazard_update')
+                self.assertEqual(socket.receive_json()['type'], 'system_status')
                 second = PoseUpdate.model_validate_json(socket.receive_text())
                 self.assertTrue(first.simulated)
                 self.assertEqual(first.coordinate_frame, 'demo_room')
