@@ -7,13 +7,14 @@ import { saveObservation, loadHistory } from './storage.js';
 import { withAuthDeadline, authErrorMessage } from './auth-request.js';
 
 function Account({ session, open, onClose }) {
-  const dialog = useRef();
+  const dialog = useRef(), pending = useRef(false);
   const [mode, setMode] = useState('signin'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
   useEffect(() => { if (open) dialog.current.showModal(); else dialog.current.close(); }, [open]);
   async function submit(event) {
-    event.preventDefault(); if (busy) return; if (!supabase) return setMessage('Supabase is not configured.');
+    event.preventDefault(); if (pending.current) return; if (!supabase) return setMessage('Supabase is not configured.');
     const form = event.currentTarget, values = new FormData(form);
     const credentials = { email: String(values.get('email')).trim(), password: String(values.get('password') || '') };
+    pending.current = true;
     setBusy(true); setMessage('Working…');
     try {
       let operation;
@@ -27,7 +28,7 @@ function Account({ session, open, onClose }) {
       setMessage(mode === 'signup' || mode === 'reset' ? 'Check your email for the next step, if applicable.' : 'Success.');
       if (mode === 'update') setMode('signin');
     } catch (error) { setMessage(authErrorMessage(error)); }
-    finally { setBusy(false); }
+    finally { pending.current = false; setBusy(false); }
   }
   useEffect(() => {
     if (!supabase) return;
@@ -35,21 +36,23 @@ function Account({ session, open, onClose }) {
     return () => data.subscription.unsubscribe();
   }, []);
   async function logout() {
+    if (pending.current) return;
+    pending.current = true;
     setBusy(true);
-    try { const { error } = await supabase.auth.signOut({ scope: 'local' }); if (error) throw error; setMessage('Signed out.'); }
-    catch { setMessage('Sign-out failed. Try again.'); } finally { setBusy(false); }
+    try { const { error } = await withAuthDeadline(supabase.auth.signOut({ scope: 'local' })); if (error) throw error; setMessage('Signed out.'); }
+    catch (error) { setMessage(authErrorMessage(error)); } finally { pending.current = false; setBusy(false); }
   }
   return <dialog ref={dialog} id="account-dialog" aria-labelledby="auth-title" onCancel={onClose} onClose={onClose}>
-    <button className="dialog-close" onClick={onClose}>Close</button><section id="auth-panel">
+    <button type="button" className="dialog-close" onClick={onClose}>Close</button><section id="auth-panel">
       <p className="eyebrow">Your account</p><h2 id="auth-title">Welcome to SAGE.</h2>
-      {session && mode !== 'update' ? <><p>{session.user.email}</p><button disabled={busy} onClick={logout}>Sign out</button></> : <>
-        <form onSubmit={submit} aria-busy={busy}>
+      {session && mode !== 'update' ? <><p>{session.user.email}</p><button type="button" disabled={busy} onClick={logout}>Sign out</button><button type="button" disabled={busy} onClick={() => { setMode("update"); setMessage(""); }}>Change password</button></> : <>
+        <form onSubmit={submit} aria-busy={busy}><fieldset disabled={busy}>
           {mode !== 'update' && <><label htmlFor="auth-email">Email</label><input id="auth-email" name="email" type="email" autoComplete="email" required /></>}
           {mode !== 'reset' && <><label htmlFor="auth-password">Password</label><input id="auth-password" name="password" type="password" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={mode === 'signin' ? 1 : 8} required /></>}
-          <button disabled={busy || !supabase} type="submit">{({ signin: 'Sign in', signup: 'Create account', reset: 'Send reset email', update: 'Set new password' })[mode]}</button>
-        </form>
-        <button disabled={busy} onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); }}>{mode === 'signup' ? 'Back to sign in' : 'Create an account'}</button>
-        <button disabled={busy} onClick={() => setMode(mode === 'reset' ? 'signin' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
+          <button disabled={busy || !supabase} type="submit">{busy ? 'Working…' : ({ signin: 'Sign in', signup: 'Create account', reset: 'Send reset email', update: 'Set new password' })[mode]}</button>
+        </fieldset></form>
+        <button type="button" disabled={busy} onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); }}>{mode === 'signup' ? 'Back to sign in' : 'Create an account'}</button>
+        <button type="button" disabled={busy} onClick={() => setMode(mode === 'reset' ? 'signin' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
       </>}
       <p role="status">{message}</p><p>Accounts protect saved data. The simulator is public.</p>
     </section>
@@ -257,3 +260,4 @@ function App() {
   </>;
 }
 createRoot(document.getElementById('root')).render(<App />);
+

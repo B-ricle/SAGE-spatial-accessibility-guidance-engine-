@@ -12,10 +12,14 @@ export async function withAuthDeadline(operation, milliseconds = 20000) {
 }
 
 export function authErrorMessage(error) {
-  if (error?.message === 'AUTH_TIMEOUT' || ['AbortError', 'TimeoutError'].includes(error?.name)) return 'Sign-in service timed out. Check your connection, reload this page, and try again.';
+  if (error?.message === 'AUTH_TIMEOUT' || ['AbortError', 'TimeoutError'].includes(error?.name)) return 'Account service timed out. Check your connection, reload this page, and try again.';
+  if (error?.name === 'AuthRetryableFetchError') return 'Account service could not be reached or timed out. Check your connection and try again.';
   if (error?.code === 'email_not_confirmed') return 'Confirm your email using the Supabase email link, then sign in.';
   if (error?.code === 'invalid_credentials') return 'Email or password is incorrect.';
   if (error?.status === 429) return 'Too many attempts. Please wait before trying again.';
+  if (error?.code === 'weak_password') return 'Choose a stronger password that meets the project password requirements.';
+  if (error?.code === 'same_password') return 'Choose a password different from your current password.';
   if (error?.code === 'signup_disabled') return 'Account creation is disabled for this project.';
   return 'Account request failed. Check your credentials and connection, then try again.';
 }
+

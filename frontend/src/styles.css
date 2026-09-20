@@ -187,3 +187,4 @@ summary { cursor: pointer; padding: 10px 0; }
 .topbar { padding-top: max(14px, env(safe-area-inset-top)); }
 footer { padding-bottom: max(30px, env(safe-area-inset-bottom)); }
 @media(max-width:760px) { .tools-grid { grid-template-columns: 1fr; } }
+#auth-panel fieldset { display: grid; gap: 10px; border: 0; padding: 0; margin: 0; min-width: 0; }
