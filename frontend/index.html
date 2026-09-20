@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f5f7" />
+    <meta name="description" content="SAGE spatial accessibility monitoring application." />
+    <title>SAGE | Environment overview</title>
+    <script>
+      // Apply the saved preference before the page paints to avoid a bright flash.
+      try {
+        const saved = localStorage.getItem('sage-theme');
+        document.documentElement.dataset.theme =
+          saved === 'light' || saved === 'dark' ? saved :
+          (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      } catch {
+        document.documentElement.dataset.theme =
+          matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="SAGE home">sage.</a>
+      <span class="edition">Spatial Accessibility Guidance Engine</span>
+      <span class="version">Preview 01</span><button class="theme-toggle" type="button" aria-label="Dark theme" aria-pressed="false" hidden>Dark theme</button>
+    </header>
+    <main id="main" tabindex="-1">
+      <div class="intro">
+        <div><p class="eyebrow">Environment overview</p><h1>Your surroundings.<br />A little clearer.</h1></div>
+        <p class="intro-copy">A considered view of your environment.<br />Everything in its place.</p>
+      </div>
+      <div class="workspace">
+        <section class="environment" aria-labelledby="environment-title">
+          <div class="section-header"><h2 id="environment-title">Environment</h2><span class="badge">Not loaded</span></div>
+          <div class="empty-scene">
+            <div class="room-symbol" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M24 5 42 15v19L24 44 6 34V15Z M6 15l18 10 18-10 M24 25v19" /></svg></div>
+            <h3>Space to see more.</h3>
+            <p>No building model or location data has been connected.</p>
+          </div>
+          <div class="scene-footer"><span>Building model: unavailable</span><span>User position: unknown</span></div>
+        </section>
+        <aside aria-label="Monitoring status">
+          <section class="status-panel" aria-labelledby="status-title">
+            <p class="eyebrow">System state</p><h2 id="status-title">Ready when<br />you connect.</h2>
+            <p>Live monitoring is not connected. Your system status will appear here.</p>
+            <dl><div><dt>Telemetry</dt><dd>Not connected</dd></div><div><dt>Latest update</dt><dd>None received</dd></div><div><dt>Navigation state</dt><dd>Unknown</dd></div></dl>
+          </section>
+          <section class="observations" aria-labelledby="observations-title"><h2 id="observations-title">Observations</h2><p>No observation data received.</p><p class="note">An empty view does not mean the area is clear.</p></section>
+        </aside>
+      </div>
+      <details class="details"><summary>About this version</summary><p>This first version establishes the web application. It does not receive live data, render a building, or generate navigation warnings. Those capabilities will be added in separate, reviewable steps.</p></details>
+    </main>
+    <footer><span>SAGE · Spatial awareness, thoughtfully designed.</span><span>Application preview</span></footer>
+    <noscript><p class="noscript">JavaScript is disabled. Future live updates require JavaScript.</p></noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
