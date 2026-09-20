@@ -4,27 +4,29 @@ import { Capacitor } from '@capacitor/core';
 import { supabase, apiBase, configuredSocket } from './supabase.js';
 import { parseMessage, socketURL } from './contracts.js';
 import { saveObservation, loadHistory } from './storage.js';
+import { withAuthDeadline, authErrorMessage } from './auth-request.js';
 
 function Account({ session, open, onClose }) {
   const dialog = useRef();
   const [mode, setMode] = useState('signin'), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
   useEffect(() => { if (open) dialog.current.showModal(); else dialog.current.close(); }, [open]);
   async function submit(event) {
-    event.preventDefault(); if (!supabase) return setMessage('Supabase is not configured.');
+    event.preventDefault(); if (busy) return; if (!supabase) return setMessage('Supabase is not configured.');
     const form = event.currentTarget, values = new FormData(form);
     const credentials = { email: String(values.get('email')).trim(), password: String(values.get('password') || '') };
     setBusy(true); setMessage('Working…');
     try {
-      let result;
-      if (mode === 'signup') result = await supabase.auth.signUp(credentials);
-      else if (mode === 'reset') result = await supabase.auth.resetPasswordForEmail(credentials.email, { redirectTo: import.meta.env.VITE_AUTH_REDIRECT_URL || location.origin });
-      else if (mode === 'update') result = await supabase.auth.updateUser({ password: credentials.password });
-      else result = await supabase.auth.signInWithPassword(credentials);
+      let operation;
+      if (mode === 'signup') operation = supabase.auth.signUp(credentials);
+      else if (mode === 'reset') operation = supabase.auth.resetPasswordForEmail(credentials.email, { redirectTo: import.meta.env.VITE_AUTH_REDIRECT_URL || location.origin });
+      else if (mode === 'update') operation = supabase.auth.updateUser({ password: credentials.password });
+      else operation = supabase.auth.signInWithPassword(credentials);
+      const result = await withAuthDeadline(operation);
       if (result.error) throw result.error;
       form.reset();
       setMessage(mode === 'signup' || mode === 'reset' ? 'Check your email for the next step, if applicable.' : 'Success.');
       if (mode === 'update') setMode('signin');
-    } catch { setMessage('Request failed. Check your details, email confirmation, password requirements, and connection.'); }
+    } catch (error) { setMessage(authErrorMessage(error)); }
     finally { setBusy(false); }
   }
   useEffect(() => {
@@ -41,13 +43,13 @@ function Account({ session, open, onClose }) {
     <button className="dialog-close" onClick={onClose}>Close</button><section id="auth-panel">
       <p className="eyebrow">Your account</p><h2 id="auth-title">Welcome to SAGE.</h2>
       {session && mode !== 'update' ? <><p>{session.user.email}</p><button disabled={busy} onClick={logout}>Sign out</button></> : <>
-        <form onSubmit={submit}>
+        <form onSubmit={submit} aria-busy={busy}>
           {mode !== 'update' && <><label htmlFor="auth-email">Email</label><input id="auth-email" name="email" type="email" autoComplete="email" required /></>}
           {mode !== 'reset' && <><label htmlFor="auth-password">Password</label><input id="auth-password" name="password" type="password" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={mode === 'signin' ? 1 : 8} required /></>}
           <button disabled={busy || !supabase} type="submit">{({ signin: 'Sign in', signup: 'Create account', reset: 'Send reset email', update: 'Set new password' })[mode]}</button>
         </form>
-        <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); }}>{mode === 'signup' ? 'Back to sign in' : 'Create an account'}</button>
-        <button onClick={() => setMode(mode === 'reset' ? 'signin' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
+        <button disabled={busy} onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setMessage(''); }}>{mode === 'signup' ? 'Back to sign in' : 'Create an account'}</button>
+        <button disabled={busy} onClick={() => setMode(mode === 'reset' ? 'signin' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
       </>}
       <p role="status">{message}</p><p>Accounts protect saved data. The simulator is public.</p>
     </section>
@@ -112,8 +114,9 @@ function App() {
   useEffect(() => {
     if (!supabase) return;
     const { data } = supabase.auth.onAuthStateChange((event, value) => {
-      setSession(value); userId.current = value?.user.id || null;
-      setHistory([]); setHistoryStatus('');
+      const nextUser = value?.user.id || null;
+      if (userId.current !== nextUser) { setHistory([]); setHistoryStatus(''); }
+      setSession(value); userId.current = nextUser;
       if (event === 'SIGNED_OUT') { setObservations(old => old.filter(item => item.source !== 'image')); setImage(null); setConsent(false); setNotice(''); }
       if (event === 'PASSWORD_RECOVERY') setAccount(true);
     });
@@ -246,7 +249,7 @@ function App() {
         <section className="status-panel"><p className="eyebrow">Controlled image analysis</p><h2>Understand an image.</h2><p>Select a JPEG or PNG, up to 5 MB. Analysis sends this image to your backend and Google Gemini. Images are not stored by this app.</p><label>Choose image<input type="file" accept="image/jpeg,image/png" onChange={e => { setImage(e.target.files?.[0] || null); setConsent(false); }} /></label><label><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /> Send this selected image to Gemini for analysis</label><button disabled={!session || !image || !consent || analyzing} onClick={analyzeImage}>{analyzing ? 'Analyzing…' : 'Analyze image'}</button>{!session && <p>Sign in to analyze images.</p>}<p>No distances, personal identification, or safety guarantees are inferred.</p></section>
       </div>
       <p role="status" className="notice">{notice}</p>
-      <details className="details"><summary>My saved history and preferences</summary><div className="actions"><button disabled={!session} onClick={refreshHistory}>Refresh history</button><button disabled={!session} onClick={() => preference(true).catch(() => setNotice('Preferences unavailable.'))}>Save account theme</button><button disabled={!session} onClick={() => preference(false).catch(() => setNotice('Preferences unavailable.'))}>Load account theme</button></div><p role="status">{historyStatus}</p>{history.map(row => <p key={row.id}>{row.payload.object_label} · {row.observed_at} · {row.payload.simulated ? 'simulated' : 'model result'}</p>)}</details>
+      <details className="details"><summary>My saved history and preferences</summary><div className="actions"><button disabled={!session} onClick={refreshHistory}>Refresh history</button><button disabled={!session} onClick={() => preference(true).catch(() => setNotice('Preferences unavailable.'))}>Save account theme</button><button disabled={!session} onClick={() => preference(false).catch(() => setNotice('Preferences unavailable.'))}>Load account theme</button></div><p role="status">{!session ? "Sign in to view your saved history." : historyStatus}</p>{history.map(row => <p key={row.id}>{row.payload.object_label} · {row.observed_at} · {row.payload.simulated ? 'simulated' : 'model result'}</p>)}</details>
       <details className="details"><summary>How this preview works</summary><p>A laptop can run the entire simulator. No Raspberry Pi is required. The blue marker uses received X/Z coordinates only when its frame matches the model. Red and amber areas are supplied hazard reports, not Gemini guesses. A missing or stale report does not mean the area is clear.</p></details>
     </main>
     <footer><span>SAGE · Spatial awareness, thoughtfully designed.</span><span>Software preview · Not a mobility safety system</span></footer>
