@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from .config import Settings
 from .routes.events import router as events_router
+from .routes.telemetry import router as telemetry_router
 
 settings = Settings()
 
@@ -15,6 +16,7 @@ app = FastAPI(
 
 
 app.include_router(events_router)
+app.include_router(telemetry_router)
 
 
 class HealthResponse(BaseModel):

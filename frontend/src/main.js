@@ -33,3 +33,16 @@ themeButton.addEventListener('click', () => {
 systemTheme.addEventListener('change', ({ matches }) => {
   if (!hasSavedPreference) applyTheme(matches ? 'dark' : 'light');
 });
+
+// Rendering stays independent from theme controls and future networking.
+import { createEnvironment } from './environment.js';
+const disposeEnvironment = createEnvironment(
+  document.querySelector('#environment-canvas'),
+  document.querySelector('.scene-controls'),
+  document.querySelector('#scene-status'),
+);
+if (import.meta.hot) import.meta.hot.dispose(disposeEnvironment);
+
+import { connectTelemetry } from './telemetry.js';
+const disposeTelemetry = connectTelemetry(document.querySelector('#telemetry-panel'));
+if (import.meta.hot) import.meta.hot.dispose(disposeTelemetry);
