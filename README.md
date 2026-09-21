@@ -22,6 +22,32 @@ GLB models stay on the local device; loading one does not create a sensor feed. 
 
 Image analysis does not provide reliable distances, 3D object locations, or collision risk. Confidence values are unknown. Images are processed in memory by the backend and are not saved by this application; the selected image is sent to Google Gemini. Saving history stores observations, not images.
 
+## Framework and technology stack
+
+SAGE separates the user interface, backend processing, and account storage. In plain terms, React presents the information, FastAPI processes requests, and Supabase manages identities and saved records.
+
+| Technology | Role in SAGE | Why it fits this project |
+| --- | --- | --- |
+| **React** | Builds the interface from components and updates it when account, connection, or observation state changes. | Keeps controls and displayed data in sync without reloading the page. |
+| **Vite** | Runs the frontend development server and builds the deployable website. | Provides a development workflow and generates static assets for Vercel. It is a build tool, not the backend. |
+| **Three.js** | Renders the 3D room, building models, user marker, and hazards. | Provides interactive 3D graphics in the browser. React manages the surrounding interface; the renderer uses Three.js directly. |
+| **FastAPI** | Provides the Python HTTP API and simulator WebSocket. | Supports structured API requests and ongoing telemetry connections in the same backend application. |
+| **Pydantic** | Defines and validates backend data models and configuration. | Helps reject malformed input and gives components a consistent format for exchanging information. |
+| **Supabase** | Provides authentication and a PostgreSQL database with row-level security. | Connects saved observations and preferences to their owner. The browser uses the Supabase JavaScript client for these operations. |
+| **Capacitor** | Packages the web interface inside an iOS application project. | Reuses the current interface for mobile development. Native build and device testing are still required. |
+| **Google Gemini API** | Analyzes a user-selected image through the Python backend. | Adds hosted model inference without training a model in this repository. It is an external service, not the application framework. |
+
+The frontend uses JavaScript/JSX and CSS; the backend uses Python. WebSockets are the communication mechanism for telemetry, while HTTP handles operations such as image analysis. Vercel and Railway are hosting platforms rather than application frameworks.
+
+### How the pieces connect
+
+- **Telemetry:** the Python simulator, or a compatible external source, sends WebSocket messages to the React application. Validated data updates the text display and Three.js scene.
+- **Image analysis:** the application sends the selected image and the user's access token to FastAPI. The backend verifies the token through Supabase, calls Gemini, and returns validated observations to the application.
+- **Accounts and saved records:** the application communicates directly with Supabase for sign-in, observation history, and preferences. Database policies limit access to the signed-in user's records.
+- **Mobile:** Capacitor hosts the same web interface in the iOS project and connects to remotely reachable services.
+
+These are separate flows: an image-analysis result does not automatically become a positioned 3D hazard, and displaying telemetry does not automatically save it to the database.
+
 ## Current limits and future work
 
 The intended wearable pipeline is sensing → mapping/localization → perception → backend → application → guidance.
@@ -186,11 +212,15 @@ Browser tests start their own services on ports 8010 and 5180. They require the 
 
 Tests cover contracts, simulator behavior, account flows, stalled requests, saved-history UI, and session restoration. They do not establish real-world navigation safety.
 
-## Troubleshooting
+## Current issues and planned improvements
 
-- **Account controls unavailable:** verify frontend Supabase variables and rebuild. History/theme controls also require an authenticated session.
-- **Account request times out:** check the displayed error, network access, and Supabase settings. A timeout is not necessarily an incorrect password.
-- **Sign-up asks for confirmation:** check the Email provider's Confirm email setting and whether a session was returned.
-- **History reports an error:** confirm the migration ran in the project used by the app; check authentication, grants, and row-level security.
-- **Hosted simulator/analysis cannot connect:** check frontend endpoint variables, backend availability, and exact CORS origin.
-- **GLB overlays are hidden:** match its coordinate frame, origin, and meter scale to telemetry.
+The following areas need follow-up before the application is considered ready for regular use. Some have local fixes or depend on deployment configuration; they are not all confirmed failures in the current deployed version.
+
+| Area | Current status | Planned follow-up |
+| --- | --- | --- |
+| **Account setup and disabled controls** | Missing frontend Supabase configuration can disable sign-in. The previously reported configuration problem was resolved, but setup feedback can be clearer. History and account-theme controls intentionally require a session. | Improve configuration messages and explain why account-dependent controls are unavailable. |
+| **Account requests getting stuck** | Timeout handling and duplicate-submission protection are implemented and covered by local tests. The original deployed stall has not been independently diagnosed. | Verify the deployed account flows and investigate any remaining network or authentication failures. |
+| **Sign-up and signed-in state** | The misleading confirmation message has been corrected locally. Immediate registration depends on the Supabase email-confirmation setting; password reset still depends on email delivery. | Verify the intended registration settings, deployed session restoration, and password-reset flow. |
+| **Saved history and account preferences** | Errors were previously reported. Local mocked tests cover observation saving and history display, but do not establish that the deployed database permissions and account-theme operations work correctly. | Test saving/loading with real authenticated test accounts and verify the migration, grants, and owner-only access policies. |
+| **Hosted telemetry and image analysis** | These features depend on matching frontend endpoint variables, backend availability, and allowed origins. Local tests do not verify the full hosted integration. | Validate the Vercel-to-Railway connections and improve feedback when a required service is unavailable. |
+| **Building models and spatial overlays** | Overlays are intentionally hidden when the model and telemetry coordinate frames differ. Alignment with a real environment remains unverified. | Clarify coordinate-frame setup and validate model origin, orientation, and meter scale when compatible environment data is available. Hardware changes remain outside the current scope. |
